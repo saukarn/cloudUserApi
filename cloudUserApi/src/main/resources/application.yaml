@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: cloudUserApi
+aws:
+  region: us-east-2
+  dynamodb:
+    table-name: users
+    endpoint: https://dynamodb.us-east-2.amazonaws.com
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  metrics:
+    tags:
+      application: cloud-user-api
+resilience4j:
+  circuitbreaker:
+    instances:
+      userService:
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        minimumNumberOfCalls: 5
