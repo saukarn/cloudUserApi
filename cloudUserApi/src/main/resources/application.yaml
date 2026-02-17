@@ -2,10 +2,10 @@ spring:
   application:
     name: cloudUserApi
 aws:
-  region: us-east-2
+  region: us-east-1
   dynamodb:
     table-name: users
-    endpoint: https://dynamodb.us-east-2.amazonaws.com
+    endpoint: https://dynamodb.us-east-1.amazonaws.com
 management:
   endpoints:
     web:

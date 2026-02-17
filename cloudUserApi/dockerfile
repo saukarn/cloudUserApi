@@ -1,0 +1,34 @@
+# ---------- Build stage ----------
+FROM public.ecr.aws/docker/library/maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /app
+
+# Cache deps
+COPY pom.xml .
+RUN mvn -q -DskipTests dependency:go-offline
+
+# Build
+COPY src ./src
+RUN mvn -q -DskipTests clean package
+
+# ---------- Runtime stage (Lambda Web Adapter) ----------
+FROM public.ecr.aws/docker/library/eclipse-temurin:17-jre
+WORKDIR /app
+
+# Add Lambda Web Adapter (includes the Runtime Interface Client)
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.9.1 /lambda-adapter /opt/extensions/lambda-adapter
+
+# Your Spring Boot app listens on 8080 (default expected by the adapter)
+ENV AWS_LWA_PORT=8080
+# Optional but recommended for Spring Boot: readiness check on actuator
+ENV AWS_LWA_READINESS_CHECK_PATH=/actuator/health
+# Optional: helps if Spring Boot init can exceed Lambda's ~10s init window
+ENV AWS_LWA_ASYNC_INIT=true
+
+# JVM tuning for Lambda/container
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseG1GC"
+
+# Copy your built jar
+COPY --from=build /app/target/*.jar /app/app.jar
+
+# Start the web app (the adapter will proxy Lambda invokes to this HTTP server)
+CMD ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
